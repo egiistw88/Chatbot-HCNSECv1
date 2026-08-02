@@ -1,0 +1,19 @@
+{
+  "name": "Egie AI Agentic Workspace",
+  "short_name": "Egie AI",
+  "description": "Advanced AI Agentic Workspace with Intelligence Layer and RAG Kitab Knowledge Base.",
+  "id": "/",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#ffffff",
+  "theme_color": "#000000",
+  "icons": [
+    {
+      "src": "/icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

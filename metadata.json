@@ -1,0 +1,6 @@
+{
+  "name": "Egie AI Workspace",
+  "description": "Premium Agentic Workspace with Murabbi Persona, Intelligence Layer (Planner/Executor/Evaluator), and RAG Kitab Knowledge Base.",
+  "requestFramePermissions": ["microphone"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
