@@ -8,7 +8,7 @@ import path from 'path';
 import { createServer as createViteServer } from 'vite';
 
 import fs from 'fs';
-import { initDb, getConversations, createConversation, getConversation, getMessages, addMessage, addDocument, getDocuments, getSetting, setSetting, updateConversationMode, updateConversationTitle, updateConversationDetails, deleteConversation, deleteDocument, deleteMessage, clearMessages, getMemories, getActiveMemories, addMemory, updateMemory, toggleMemory, deleteMemory, getKnowledgeBases, createKnowledgeBase, deleteKnowledgeBase, getKnowledgeDocuments, addKnowledgeDocument, deleteKnowledgeDocument, searchKnowledgeChunks } from './db.ts';
+import { initDb, getConversations, createConversation, getConversation, getMessages, addMessage, addDocument, getDocuments, getSetting, setSetting, updateConversationMode, updateConversationTitle, updateConversationDetails, deleteConversation, deleteDocument, deleteMessage, clearMessages, getMemories, getActiveMemories, addMemory, updateMemory, toggleMemory, deleteMemory, getKnowledgeBases, createKnowledgeBase, deleteKnowledgeBase, getKnowledgeDocuments, addKnowledgeDocument, deleteKnowledgeDocument, searchKnowledgeChunks } from './db.js';
 
 
 
@@ -906,7 +906,15 @@ ${textToAnalyze.substring(0, 3000)}
 }
 
 
+
+  // Error handling middleware
+  app.use((err, req, res, next) => {
+    console.error('[Express Error]', err);
+    res.status(500).json({ error: err.message || 'Internal Server Error' });
+  });
+
   // Vite middleware for development
+
   if (process.env.NODE_ENV !== 'production' && !process.env.VERCEL) {
     (async () => {
       const vite = await createViteServer({
