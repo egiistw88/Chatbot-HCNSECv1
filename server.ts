@@ -4,7 +4,6 @@ import multer from 'multer';
 import OpenAI from 'openai';
 import { GoogleGenAI } from '@google/genai';
 import path from 'path';
-import { createServer as createViteServer } from 'vite';
 
 import fs from 'fs';
 import { initDb, getConversations, createConversation, getConversation, getMessages, addMessage, addDocument, getDocuments, getSetting, setSetting, updateConversationMode, updateConversationTitle, updateConversationDetails, deleteConversation, deleteDocument, deleteMessage, clearMessages, getMemories, getActiveMemories, addMemory, updateMemory, toggleMemory, deleteMemory, getKnowledgeBases, createKnowledgeBase, deleteKnowledgeBase, getKnowledgeDocuments, addKnowledgeDocument, deleteKnowledgeDocument, searchKnowledgeChunks } from './db.js';
@@ -939,6 +938,7 @@ ${textToAnalyze.substring(0, 3000)}
 
   if (process.env.NODE_ENV !== 'production' && !process.env.VERCEL) {
     (async () => {
+      const { createServer: createViteServer } = await import('vite');
       const vite = await createViteServer({
         server: { middlewareMode: true },
         appType: 'spa',
