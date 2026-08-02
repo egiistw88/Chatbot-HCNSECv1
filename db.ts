@@ -133,10 +133,30 @@ export async function getSetting(key: string): Promise<string | null> {
   const row = db.prepare('SELECT value FROM settings WHERE key = ?').get(key) as any;
   if (row) {
     try {
-      return decrypt(row.value);
+      const val = decrypt(row.value);
+      if (val && val.trim() !== '') return val;
     } catch (e) {
-      return row.value; // Fallback for unencrypted
+      if (row.value && row.value.trim() !== '') return row.value; // Fallback for unencrypted
     }
+  }
+
+  // Fallback to Environment Variables
+  if (key === 'api_key' || key === 'hcnsec_api_key') {
+    return process.env.HCNSEC_API_KEY || process.env.GEMINI_API_KEY || null;
+  }
+  if (key === 'gemini_api_key') {
+    return process.env.GEMINI_API_KEY || null;
+  }
+  if (key === 'fast_model') {
+    return process.env.FAST_MODEL || null;
+  }
+  if (key === 'thinking_model') {
+    return process.env.THINKING_MODEL || null;
+  }
+  if (key === 'app_url') {
+    if (process.env.APP_URL) return process.env.APP_URL;
+    if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`;
+    return null;
   }
   return null;
 }

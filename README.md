@@ -43,11 +43,17 @@ The Egie AI Workspace is fully optimized for mobile devices:
 3.  **Install**: Select "Install App" or "Add to Home Screen".
 4.  **Launch**: Open the **Egie AI** icon from your home screen.
 
-### Server Setup (Cloud Run / Vercel)
-1.  Clone or export the project.
-2.  Set `GEMINI_API_KEY` in your environment variables.
-3.  `npm install && npm run build`
-4.  `npm start`
+### Server Setup & Vercel Deployment
+1.  **Clone / Push Repository**: Commit all code and push to your GitHub repository.
+2.  **Import to Vercel**: Connect your repository to Vercel.
+3.  **Configure Environment Variables in Vercel Dashboard** (`Project Settings > Environment Variables`):
+    - `HCNSEC_API_KEY`: Secret key for OpenAI-compatible endpoint.
+    - `GEMINI_API_KEY`: Your Google Gemini API Key for fallback.
+    - `DB_ENCRYPTION_KEY`: Exactly 32 characters (e.g. `01234567890123456789012345678901`).
+    - `FAST_MODEL`: (Optional) e.g. `gemini-2.5-flash` or `auto`.
+    - `THINKING_MODEL`: (Optional) e.g. `gemini-2.5-pro` or `auto`.
+    - `APP_URL`: Your Vercel production domain (e.g. `https://hcnsecch.vercel.app`).
+4.  **Deploy**: Deploy on Vercel. All `/api/*` requests will execute via Vercel Serverless Functions with native ESM resolution and fallback environment handling.
 
 ## 🛠️ Tech Stack
 - **Frontend**: React 18, Vite, Tailwind CSS, Lucide Icons, Framer Motion.
