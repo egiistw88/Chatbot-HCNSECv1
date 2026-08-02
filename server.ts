@@ -1,7 +1,6 @@
 import express from 'express';
 import cors from 'cors';
 import multer from 'multer';
-import { PDFParse } from 'pdf-parse';
 import OpenAI from 'openai';
 import { GoogleGenAI } from '@google/genai';
 import path from 'path';
@@ -9,6 +8,35 @@ import { createServer as createViteServer } from 'vite';
 
 import fs from 'fs';
 import { initDb, getConversations, createConversation, getConversation, getMessages, addMessage, addDocument, getDocuments, getSetting, setSetting, updateConversationMode, updateConversationTitle, updateConversationDetails, deleteConversation, deleteDocument, deleteMessage, clearMessages, getMemories, getActiveMemories, addMemory, updateMemory, toggleMemory, deleteMemory, getKnowledgeBases, createKnowledgeBase, deleteKnowledgeBase, getKnowledgeDocuments, addKnowledgeDocument, deleteKnowledgeDocument, searchKnowledgeChunks } from './db.js';
+
+async function parsePdf(fileBuffer: Buffer): Promise<string> {
+  if (typeof (globalThis as any).DOMMatrix === 'undefined') {
+    (globalThis as any).DOMMatrix = class DOMMatrix {
+      a = 1; b = 0; c = 0; d = 1; e = 0; f = 0;
+      constructor() {}
+    };
+  }
+  if (typeof (globalThis as any).ImageData === 'undefined') {
+    (globalThis as any).ImageData = class ImageData {
+      width: number; height: number; data: Uint8ClampedArray;
+      constructor(w: number, h: number) { this.width = w; this.height = h; this.data = new Uint8ClampedArray(w * h * 4); }
+    };
+  }
+  if (typeof (globalThis as any).Path2D === 'undefined') {
+    (globalThis as any).Path2D = class Path2D { constructor() {} };
+  }
+
+  try {
+    const { PDFParse } = await import('pdf-parse');
+    const parser = new PDFParse({ data: fileBuffer });
+    const pdfData = await parser.getText();
+    await parser.destroy();
+    return pdfData.text || '';
+  } catch (err) {
+    console.warn('PDFParse error, fallback text extraction:', err);
+    return fileBuffer.toString('utf-8').replace(/[^\x20-\x7E\n\r\t]/g, ' ');
+  }
+}
 
 
 
@@ -387,10 +415,7 @@ ${textToAnalyze.substring(0, 3000)}
         sourceType = 'upload';
         const fileBuf = fs.readFileSync(req.file.path);
         if (req.file.originalname.endsWith('.pdf')) {
-          const parser = new PDFParse({ data: fileBuf });
-          const pdfData = await parser.getText();
-          await parser.destroy();
-          content = pdfData.text;
+          content = await parsePdf(fileBuf);
         } else {
           content = fileBuf.toString('utf-8');
         }
@@ -536,10 +561,7 @@ ${textToAnalyze.substring(0, 3000)}
       let content = '';
       if (file.mimetype === 'application/pdf') {
         const dataBuffer = fs.readFileSync(file.path);
-        const parser = new PDFParse({ data: dataBuffer });
-        const data = await parser.getText();
-        await parser.destroy();
-        content = data.text;
+        content = await parsePdf(dataBuffer);
       } else {
         content = fs.readFileSync(file.path, 'utf8');
       }
