@@ -17,7 +17,7 @@ This application moves beyond simple "Prompt-Response" cycles. It implements a s
 ## 🛡️ Stability & Reliability (Phase 1)
 - **Daily Automatic Backups**: SQLite database rotation every 24 hours to `data/daily_backup_[0-6].sqlite`.
 - **Error Boundary Module**: Concrete React Error Boundary integration with fallbacks, stack traces, and instant reload controls.
-- **Vercel Serverless Optimization**: Native ESM module resolution (`./db.js`), `/tmp` serverless SQLite database path support, global DOMMatrix/ImageData polyfills for PDF processing, dynamic lazy-loading for `pdf-parse` & `vite` (preventing `@rollup/rollup-linux-x64-gnu` missing native binary crashes on serverless), and `vercel.json` file-tracing configurations.
+- **Vercel Serverless Optimization**: Native ESM module resolution (`./db.js`), `/tmp` serverless SQLite database path support, Multer MemoryStorage file processing (eliminating `uploads/` ENOENT disk crashes), `@vercel/blob` / Data URI StorageProvider integration, global DOMMatrix/ImageData polyfills for PDF processing, dynamic lazy-loading for `pdf-parse` & `vite` (preventing `@rollup/rollup-linux-x64-gnu` missing native binary crashes on serverless), health check endpoint (`/api/health`), and `vercel.json` file-tracing configurations.
 - **User Data Portability**: Admin endpoints for full database export and manual backups.
 - **Metadata Grounding**: Advanced classification for Memory (`confidence`, `source`) and RAG Documents (`version`, `source_type`).
 

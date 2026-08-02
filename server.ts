@@ -7,6 +7,7 @@ import path from 'path';
 
 import fs from 'fs';
 import { initDb, getConversations, createConversation, getConversation, getMessages, addMessage, addDocument, getDocuments, getSetting, setSetting, updateConversationMode, updateConversationTitle, updateConversationDetails, deleteConversation, deleteDocument, deleteMessage, clearMessages, getMemories, getActiveMemories, addMemory, updateMemory, toggleMemory, deleteMemory, getKnowledgeBases, createKnowledgeBase, deleteKnowledgeBase, getKnowledgeDocuments, addKnowledgeDocument, deleteKnowledgeDocument, searchKnowledgeChunks } from './db.js';
+import { getStorageProvider } from './src/services/storage/index.js';
 
 async function parsePdf(fileBuffer: Buffer): Promise<string> {
   if (typeof (globalThis as any).DOMMatrix === 'undefined') {
@@ -40,7 +41,12 @@ async function parsePdf(fileBuffer: Buffer): Promise<string> {
 
 
 
-const upload = multer({ dest: 'uploads/' });
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 10 * 1024 * 1024
+  }
+});
 
 const DEFAULT_FALLBACK_MODELS = ['auto', 'gpt-4o', 'gemini-2.5-flash', 'claude-3-5-sonnet', 'gpt-4o-mini', 'deepseek-r1'];
 
@@ -227,13 +233,40 @@ export const app = express();
 app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 
-let dbInitPromise = null;
+let databaseReady = false;
+async function ensureDatabase() {
+  if (databaseReady) return;
+  await initDb();
+  databaseReady = true;
+}
+
 app.use(async (req, res, next) => {
-  if (!dbInitPromise) {
-    dbInitPromise = initDb().catch(e => console.error("DB Init Error:", e));
+  try {
+    await ensureDatabase();
+    next();
+  } catch (err) {
+    console.error("Database initialization error:", err);
+    next(err);
   }
-  await dbInitPromise;
-  next();
+});
+
+// Health check endpoint for deployment monitoring
+app.get('/api/health', async (req, res) => {
+  try {
+    await ensureDatabase();
+    res.json({
+      status: 'ok',
+      database: 'connected',
+      timestamp: new Date().toISOString()
+    });
+  } catch (err: any) {
+    res.status(500).json({
+      status: 'error',
+      database: 'disconnected',
+      error: err.message,
+      timestamp: new Date().toISOString()
+    });
+  }
 });
 
 // API Routes
@@ -409,16 +442,23 @@ ${textToAnalyze.substring(0, 3000)}
         }
       }
 
+      let fileUrl = '';
       if (req.file) {
         title = title || req.file.originalname;
         sourceType = 'upload';
-        const fileBuf = fs.readFileSync(req.file.path);
+        const fileBuf = req.file.buffer;
         if (req.file.originalname.endsWith('.pdf')) {
           content = await parsePdf(fileBuf);
         } else {
           content = fileBuf.toString('utf-8');
         }
-        fs.unlinkSync(req.file.path);
+
+        try {
+          const storage = getStorageProvider();
+          fileUrl = await storage.upload(fileBuf, req.file.originalname, req.file.mimetype);
+        } catch (storageErr) {
+          console.warn('Storage provider upload warning:', storageErr);
+        }
       }
 
       if (!title || !title.trim() || !content || !content.trim()) {
@@ -427,9 +467,10 @@ ${textToAnalyze.substring(0, 3000)}
 
       const id = 'doc-' + Date.now().toString() + Math.random().toString(36).substring(2, 6);
       await addKnowledgeDocument(id, knowledgeBaseId, title.trim(), author || 'Anonim', category || 'Umum', content.trim(), version || '1.0', sourceType || 'manual');
-      res.json({ success: true, id });
+      res.json({ success: true, id, url: fileUrl || undefined });
     } catch (err: any) {
-      res.status(500).json({ error: err.message });
+      console.error('Error in /api/rag/documents:', err);
+      res.status(500).json({ error: err.message || 'Gagal memproses dokumen' });
     }
   });
 
@@ -559,18 +600,24 @@ ${textToAnalyze.substring(0, 3000)}
 
       let content = '';
       if (file.mimetype === 'application/pdf') {
-        const dataBuffer = fs.readFileSync(file.path);
-        content = await parsePdf(dataBuffer);
+        content = await parsePdf(file.buffer);
       } else {
-        content = fs.readFileSync(file.path, 'utf8');
+        content = file.buffer.toString('utf8');
       }
 
-      fs.unlinkSync(file.path); // Clean up
-      
+      let fileUrl = '';
+      try {
+        const storage = getStorageProvider();
+        fileUrl = await storage.upload(file.buffer, file.originalname, file.mimetype);
+      } catch (storageErr) {
+        console.warn('Storage provider upload warning:', storageErr);
+      }
+
       const id = Date.now().toString();
       await addDocument(id, conversationId, file.originalname, content);
-      res.json({ success: true, id, filename: file.originalname });
+      res.json({ success: true, id, filename: file.originalname, url: fileUrl || undefined });
     } catch (error: any) {
+      console.error('Error in /api/upload:', error);
       res.status(500).json({ error: error.message });
     }
   });
