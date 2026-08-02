@@ -2,10 +2,10 @@ import Database from 'better-sqlite3';
 import crypto from 'crypto';
 import path from 'path';
 import fs from 'fs';
-import { fileURLToPath } from 'url';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+
+
+
 
 const ENCRYPTION_KEY = process.env.DB_ENCRYPTION_KEY || '01234567890123456789012345678901'; // Must be 32 chars
 const IV_LENGTH = 16;
@@ -31,7 +31,8 @@ function decrypt(text: string): string {
 let db: any;
 
 export async function initDb() {
-  const dbDir = path.join(process.cwd(), 'data');
+  const isVercel = process.env.VERCEL === '1' || process.env.VERCEL === 'true' || !!process.env.VERCEL;
+  const dbDir = isVercel ? '/tmp' : path.join(process.cwd(), 'data');
   if (!fs.existsSync(dbDir)) {
     fs.mkdirSync(dbDir, { recursive: true });
   }

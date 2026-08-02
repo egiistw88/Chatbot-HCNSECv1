@@ -6,12 +6,12 @@ import OpenAI from 'openai';
 import { GoogleGenAI } from '@google/genai';
 import path from 'path';
 import { createServer as createViteServer } from 'vite';
-
+import { fileURLToPath } from 'url';
 import fs from 'fs';
 import { initDb, getConversations, createConversation, getConversation, getMessages, addMessage, addDocument, getDocuments, getSetting, setSetting, updateConversationMode, updateConversationTitle, updateConversationDetails, deleteConversation, deleteDocument, deleteMessage, clearMessages, getMemories, getActiveMemories, addMemory, updateMemory, toggleMemory, deleteMemory, getKnowledgeBases, createKnowledgeBase, deleteKnowledgeBase, getKnowledgeDocuments, addKnowledgeDocument, deleteKnowledgeDocument, searchKnowledgeChunks } from './db.ts';
 
-
-
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const upload = multer({ dest: 'uploads/' });
 
@@ -196,20 +196,26 @@ async function callChatCompletion(messages: any[], requestedModel: string, apiKe
   throw lastError || new Error('Layanan AI sedang tidak tersedia, silakan coba lagi beberapa saat.');
 }
 
-export const app = express();
-app.use(cors());
-app.use(express.json({ limit: '50mb' }));
-
-let dbInitPromise = null;
+const app = express();
+let dbInitialized = false;
 app.use(async (req, res, next) => {
-  if (!dbInitPromise) {
-    dbInitPromise = initDb().catch(e => console.error("DB Init Error:", e));
+  if (!dbInitialized) {
+  
+    dbInitialized = true;
   }
-  await dbInitPromise;
   next();
 });
 
-// API Routes
+function setupRoutes() {
+
+
+  const PORT = 3000;
+
+  app.use(cors());
+  app.use(express.json({ limit: '50mb' }));
+
+  // API Routes
+  
   app.get('/api/settings/:key', async (req, res) => {
     const value = await getSetting(req.params.key);
     res.json({ value });
@@ -891,7 +897,6 @@ ${textToAnalyze.substring(0, 3000)}
   });
 
   // Daily backup check (every 24 hours)
-  if (!process.env.VERCEL) {
   setInterval(() => {
     const dataDir = path.join(process.cwd(), 'data');
     const dbPath = path.join(dataDir, 'database.sqlite');
@@ -903,35 +908,25 @@ ${textToAnalyze.substring(0, 3000)}
       console.error('[Backup Error]', e);
     }
   }, 24 * 60 * 60 * 1000);
-}
-
 
   // Vite middleware for development
-  if (process.env.NODE_ENV !== 'production' && !process.env.VERCEL) {
-    (async () => {
-      const vite = await createViteServer({
-        server: { middlewareMode: true },
-        appType: 'spa',
-      });
-      app.use(vite.middlewares);
-      const PORT = 3000;
-      app.listen(PORT, '0.0.0.0', () => {
-        console.log(`Server running on http://0.0.0.0:${PORT}`);
-      });
-    })();
-  } else if (!process.env.VERCEL) {
+  if (process.env.NODE_ENV !== 'production') {
+    const vite = await createViteServer({
+      server: { middlewareMode: true },
+      appType: 'spa',
+    });
+    app.use(vite.middlewares);
+  } else {
     const distPath = path.join(process.cwd(), 'dist');
     app.use(express.static(distPath));
     app.get('*', (req, res) => {
       res.sendFile(path.join(distPath, 'index.html'));
     });
-    const PORT = 3000;
-    app.listen(PORT, '0.0.0.0', () => {
-      console.log(`Server running on http://0.0.0.0:${PORT}`);
-    });
-  } else {
-    // Vercel production: static files are handled by vercel.json routing
-    // just export the app
   }
 
-export default app;
+  app.listen(PORT, '0.0.0.0', () => {
+    console.log(`Server running on http://0.0.0.0:${PORT}`);
+  });
+}
+
+startServer();
